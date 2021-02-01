@@ -3,10 +3,9 @@
 package config
 
 // GetPlatformDefaultConfig gets the defaults for the platform
-func GetPlatformDefaultConfig() []byte {
-	return []byte(
-		`os:
-  openCommand: 'open {{filename}}'
-  openLinkCommand: 'open {{link}}'
-  copyToClipboardCommand: 'bash -c "echo -n {{str}} | pbcopy"'`)
+func GetPlatformDefaultConfig() OSConfig {
+	return OSConfig{
+		OpenCommand:     "open {{filename}}",
+		OpenLinkCommand: "open {{link}}",
+	}
 }

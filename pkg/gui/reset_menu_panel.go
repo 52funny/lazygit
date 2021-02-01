@@ -4,31 +4,28 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/jesseduffield/lazygit/pkg/commands"
+	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
 )
 
-func (gui *Gui) resetToRef(ref string, strength string, options commands.RunCommandOptions) error {
+func (gui *Gui) resetToRef(ref string, strength string, options oscommands.RunCommandOptions) error {
 	if err := gui.GitCommand.ResetToCommit(ref, strength, options); err != nil {
 		return gui.surfaceError(err)
 	}
 
-	if err := gui.switchCommitsPanelContext("branch-commits"); err != nil {
-		return err
-	}
-
-	gui.State.Panels.Commits.SelectedLine = 0
-	gui.State.Panels.ReflogCommits.SelectedLine = 0
+	gui.State.Panels.Commits.SelectedLineIdx = 0
+	gui.State.Panels.ReflogCommits.SelectedLineIdx = 0
 	// loading a heap of commits is slow so we limit them whenever doing a reset
 	gui.State.Panels.Commits.LimitCommits = true
+
+	if err := gui.pushContext(gui.Contexts.BranchCommits.Context); err != nil {
+		return err
+	}
 
 	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES, BRANCHES, REFLOG, COMMITS}}); err != nil {
 		return err
 	}
-	if err := gui.resetOrigin(gui.getCommitsView()); err != nil {
-		return err
-	}
 
-	return gui.handleCommitSelect(gui.g, gui.getCommitsView())
+	return nil
 }
 
 func (gui *Gui) createResetMenu(ref string) error {
@@ -44,10 +41,10 @@ func (gui *Gui) createResetMenu(ref string) error {
 				),
 			},
 			onPress: func() error {
-				return gui.resetToRef(ref, strength, commands.RunCommandOptions{})
+				return gui.resetToRef(ref, strength, oscommands.RunCommandOptions{})
 			},
 		}
 	}
 
-	return gui.createMenu(fmt.Sprintf("%s %s", gui.Tr.SLocalize("resetTo"), ref), menuItems, createMenuOptions{showCancel: true})
+	return gui.createMenu(fmt.Sprintf("%s %s", gui.Tr.LcResetTo, ref), menuItems, createMenuOptions{showCancel: true})
 }

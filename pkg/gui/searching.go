@@ -11,8 +11,10 @@ import (
 func (gui *Gui) handleOpenSearch(g *gocui.Gui, v *gocui.View) error {
 	gui.State.Searching.isSearching = true
 	gui.State.Searching.view = v
-	gui.renderString(gui.g, "search", "")
-	if err := gui.switchFocus(gui.g, v, gui.getSearchView()); err != nil {
+
+	gui.renderString("search", "")
+
+	if err := gui.pushContext(gui.Contexts.Search.Context); err != nil {
 		return err
 	}
 
@@ -21,11 +23,16 @@ func (gui *Gui) handleOpenSearch(g *gocui.Gui, v *gocui.View) error {
 
 func (gui *Gui) handleSearch(g *gocui.Gui, v *gocui.View) error {
 	gui.State.Searching.searchString = gui.getSearchView().Buffer()
-	if err := gui.switchFocus(gui.g, nil, gui.State.Searching.view); err != nil {
+	if err := gui.returnFromContext(); err != nil {
 		return err
 	}
 
-	if err := gui.State.Searching.view.Search(gui.State.Searching.searchString); err != nil {
+	view := gui.State.Searching.view
+	if view == nil {
+		return nil
+	}
+
+	if err := view.Search(gui.State.Searching.searchString); err != nil {
 		return err
 	}
 
@@ -33,16 +40,17 @@ func (gui *Gui) handleSearch(g *gocui.Gui, v *gocui.View) error {
 }
 
 func (gui *Gui) onSelectItemWrapper(innerFunc func(int) error) func(int, int, int) error {
+	keybindingConfig := gui.Config.GetUserConfig().Keybinding
+
 	return func(y int, index int, total int) error {
 		if total == 0 {
 			gui.renderString(
-				gui.g,
 				"search",
 				fmt.Sprintf(
 					"no matches for '%s' %s",
 					gui.State.Searching.searchString,
 					utils.ColoredString(
-						fmt.Sprintf("%s: exit search mode", gui.getKeyDisplay("universal.return")),
+						fmt.Sprintf("%s: exit search mode", gui.getKeyDisplay(keybindingConfig.Universal.Return)),
 						theme.OptionsFgColor,
 					),
 				),
@@ -50,7 +58,6 @@ func (gui *Gui) onSelectItemWrapper(innerFunc func(int) error) func(int, int, in
 			return nil
 		}
 		gui.renderString(
-			gui.g,
 			"search",
 			fmt.Sprintf(
 				"matches for '%s' (%d of %d) %s",
@@ -60,9 +67,9 @@ func (gui *Gui) onSelectItemWrapper(innerFunc func(int) error) func(int, int, in
 				utils.ColoredString(
 					fmt.Sprintf(
 						"%s: next match, %s: previous match, %s: exit search mode",
-						gui.getKeyDisplay("universal.nextMatch"),
-						gui.getKeyDisplay("universal.prevMatch"),
-						gui.getKeyDisplay("universal.return"),
+						gui.getKeyDisplay(keybindingConfig.Universal.NextMatch),
+						gui.getKeyDisplay(keybindingConfig.Universal.PrevMatch),
+						gui.getKeyDisplay(keybindingConfig.Universal.Return),
 					),
 					theme.OptionsFgColor,
 				),
@@ -86,9 +93,13 @@ func (gui *Gui) onSearchEscape() error {
 }
 
 func (gui *Gui) handleSearchEscape(g *gocui.Gui, v *gocui.View) error {
-	if err := gui.switchFocus(gui.g, nil, gui.State.Searching.view); err != nil {
+	if err := gui.onSearchEscape(); err != nil {
 		return err
 	}
 
-	return gui.onSearchEscape()
+	if err := gui.returnFromContext(); err != nil {
+		return err
+	}
+
+	return nil
 }

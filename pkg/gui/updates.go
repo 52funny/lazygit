@@ -1,15 +1,20 @@
 package gui
 
-import "github.com/jesseduffield/gocui"
+import (
+	"fmt"
+
+	"github.com/jesseduffield/gocui"
+)
 
 func (gui *Gui) showUpdatePrompt(newVersion string) error {
-	title := "New version available!"
-	message := "Download latest version? (enter/esc)"
-	currentView := gui.g.CurrentView()
-	return gui.createConfirmationPanel(gui.g, currentView, true, title, message, func(g *gocui.Gui, v *gocui.View) error {
-		gui.startUpdating(newVersion)
-		return nil
-	}, nil)
+	return gui.ask(askOpts{
+		title:  "New version available!",
+		prompt: fmt.Sprintf("Download version %s? (enter/esc)", newVersion),
+		handleConfirm: func() error {
+			gui.startUpdating(newVersion)
+			return nil
+		},
+	})
 }
 
 func (gui *Gui) onUserUpdateCheckFinish(newVersion string, err error) error {
@@ -31,7 +36,7 @@ func (gui *Gui) onBackgroundUpdateCheckFinish(newVersion string, err error) erro
 	if newVersion == "" {
 		return nil
 	}
-	if gui.Config.GetUserConfig().Get("update.method") == "background" {
+	if gui.Config.GetUserConfig().Update.Method == "background" {
 		gui.startUpdating(newVersion)
 		return nil
 	}
@@ -40,24 +45,26 @@ func (gui *Gui) onBackgroundUpdateCheckFinish(newVersion string, err error) erro
 
 func (gui *Gui) startUpdating(newVersion string) {
 	gui.State.Updating = true
-	gui.statusManager.addWaitingStatus("updating")
-	gui.Updater.Update(newVersion, gui.onUpdateFinish)
+	statusId := gui.statusManager.addWaitingStatus("updating")
+	gui.Updater.Update(newVersion, func(err error) error { return gui.onUpdateFinish(statusId, err) })
 }
 
-func (gui *Gui) onUpdateFinish(err error) error {
+func (gui *Gui) onUpdateFinish(statusId int, err error) error {
 	gui.State.Updating = false
-	gui.statusManager.removeStatus("updating")
-	gui.renderString(gui.g, "appStatus", "")
+	gui.statusManager.removeStatus(statusId)
+	gui.renderString("appStatus", "")
 	if err != nil {
 		return gui.createErrorPanel("Update failed: " + err.Error())
 	}
 	return nil
 }
 
-func (gui *Gui) createUpdateQuitConfirmation(g *gocui.Gui, v *gocui.View) error {
-	title := "Currently Updating"
-	message := "An update is in progress. Are you sure you want to quit?"
-	return gui.createConfirmationPanel(gui.g, v, true, title, message, func(g *gocui.Gui, v *gocui.View) error {
-		return gocui.ErrQuit
-	}, nil)
+func (gui *Gui) createUpdateQuitConfirmation() error {
+	return gui.ask(askOpts{
+		title:  "Currently Updating",
+		prompt: "An update is in progress. Are you sure you want to quit?",
+		handleConfirm: func() error {
+			return gocui.ErrQuit
+		},
+	})
 }

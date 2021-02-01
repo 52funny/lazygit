@@ -1,6 +1,11 @@
-# lazygit
+<p align="center">
+  <img src="https://i.imgur.com/oYB7Cj8.png">
+</p>
 
 ![CI](https://github.com/jesseduffield/lazygit/workflows/Continuous%20Integration/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/jesseduffield/lazygit)](https://goreportcard.com/report/github.com/jesseduffield/lazygit) [![GolangCI](https://golangci.com/badges/github.com/jesseduffield/lazygit.svg)](https://golangci.com) [![GoDoc](https://godoc.org/github.com/jesseduffield/lazygit?status.svg)](http://godoc.org/github.com/jesseduffield/lazygit) [![GitHub tag](https://img.shields.io/github/tag/jesseduffield/lazygit.svg)]() [![TODOs](https://badgen.net/https/api.tickgit.com/badgen/github.com/jesseduffield/lazygit)](https://www.tickgit.com/browse?repo=github.com/jesseduffield/lazygit)
+
+
+
 
 A simple terminal UI for git commands, written in Go with the [gocui](https://github.com/jroimartin/gocui "gocui") library.
 
@@ -8,7 +13,7 @@ Rant time: You've heard it before, git is _powerful_, but what good is that powe
 
 If you're a mere mortal like me and you're tired of hearing how powerful git is when in your daily life it's a powerful pain in your ass, lazygit might be for you.
 
-![Gif](/docs/resources/staging.gif)
+![Gif](../assets/staging.gif)
 
 ## Table of contents
 
@@ -21,15 +26,19 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
   - [Scoop (Windows)](#scoop-windows)
   - [Arch Linux](#arch-linux)
   - [Fedora and CentOS 7](#fedora-and-centos-7)
+  - [Solus Linux](#solus-linux)
   - [FreeBSD](#freebsd)
   - [Conda](#conda)
   - [Go](#go)
+  - [Chocolatey (Windows)](#chocolatey-windows)
+  - [Manual](#manual)
 - [Usage](#usage)
   - [Keybindings](#keybindings)
   - [Changing directory on exit](#changing-directory-on-exit)
   - [Undo/Redo](#undoredo)
 - [Configuration](#configuration)
   - [Custom pagers](#configuration)
+  - [Custom commands](#configuration)
 - [Tutorials](#tutorials)
 - [Cool Features](#cool-features)
 - [Contributing](#contributing)
@@ -44,7 +53,7 @@ Github Sponsors is matching all donations dollar-for-dollar for 12 months so if 
 
 ### Binary Releases
 
-For Windows, Mac OS or Linux, you can download a binary release [here](../../releases).
+For Windows, Mac OS(10.10+) or Linux, you can download a binary release [here](../../releases).
 
 ### Homebrew
 
@@ -125,6 +134,12 @@ sudo dnf copr enable atim/lazygit -y
 sudo dnf install lazygit
 ```
 
+### Solus Linux
+
+```sh
+sudo eopkg install lazygit
+```
+
 ### FreeBSD
 
 ```sh
@@ -152,6 +167,25 @@ may need to add `~/go/bin` to your \$PATH (MacOS/Linux), or `%HOME%\go\bin`
 (Windows). Not to be mistaked for `C:\Go\bin` (which is for Go's own binaries,
 not apps like Lazygit).
 
+### Chocolatey (Windows)
+
+You can install `lazygit` using [Chocolatey](https://chocolatey.org/):
+
+```sh
+choco install lazygit
+```
+
+### Manual
+
+You'll need to [install Go](https://golang.org/doc/install)
+
+```
+git clone https://github.com/jesseduffield/lazygit.git
+cd lazygit
+go install
+```
+
+You can also use `go run main.go` to compile and run in one go (pun definitely intended)
 
 ## Usage
 
@@ -201,6 +235,12 @@ Check out the [configuration docs](docs/Config.md).
 
 See the [docs](docs/Custom_Pagers.md)
 
+### Custom Commands
+
+If lazygit is missing a feature, there's a good chance you can implement it yourself with a custom command!
+
+See the [docs](docs/Custom_Command_Keybindings.md)
+
 ## Tutorials
 
 - [Video Tutorial](https://youtu.be/VDXvbHZYeKY)
@@ -219,18 +259,21 @@ See the [docs](docs/Custom_Pagers.md)
 
 ### Resolving merge conflicts
 
-![Gif](/docs/resources/resolving-merge-conflicts.gif)
+![Gif](../assets/resolving-merge-conflicts.gif)
 
 ### Interactive Rebasing
 
-![Interactive Rebasing](/docs/resources/rebase.gif)
+![Interactive Rebasing](../assets/rebase.gif)
 
 ## Contributing
 
 We love your input! Please check out the [contributing guide](CONTRIBUTING.md).
 For contributor discussion about things not better discussed here in the repo, join the slack channel
 
-[![Slack](/docs/resources/slack_rgb.png)](https://join.slack.com/t/lazygit/shared_invite/zt-5bo2clzo-hB8ZTVN5dWUCqj5QFiQVLA)
+[![Slack](../assets/slack_rgb.png)](https://join.slack.com/t/lazygit/shared_invite/zt-5bo2clzo-hB8ZTVN5dWUCqj5QFiQVLA)
+
+### Debugging Locally
+Run `lazygit --debug` in one terminal tab and `lazygit --logs` in another to view the program and its log output side by side
 
 ## Donate
 
@@ -253,4 +296,5 @@ If you want to see what I (Jesse) am up to in terms of development, follow me on
 
 If you find that lazygit doesn't quite satisfy your requirements, these may be a better fit:
 
+- [GitUI](https://github.com/Extrawurst/gitui)
 - [tig](https://github.com/jonas/tig)

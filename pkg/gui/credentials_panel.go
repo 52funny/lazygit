@@ -4,31 +4,37 @@ import (
 	"strings"
 
 	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
 type credentials chan string
 
-// waitForPassUname wait for a username or password input from the credentials popup
-func (gui *Gui) waitForPassUname(g *gocui.Gui, currentView *gocui.View, passOrUname string) string {
+// promptUserForCredential wait for a username, password or passphrase input from the credentials popup
+func (gui *Gui) promptUserForCredential(passOrUname string) string {
 	gui.credentials = make(chan string)
-	g.Update(func(g *gocui.Gui) error {
+	gui.g.Update(func(g *gocui.Gui) error {
 		credentialsView, _ := g.View("credentials")
-		if passOrUname == "username" {
-			credentialsView.Title = gui.Tr.SLocalize("CredentialsUsername")
+		switch passOrUname {
+		case "username":
+			credentialsView.Title = gui.Tr.CredentialsUsername
 			credentialsView.Mask = 0
-		} else {
-			credentialsView.Title = gui.Tr.SLocalize("CredentialsPassword")
+		case "password":
+			credentialsView.Title = gui.Tr.CredentialsPassword
+			credentialsView.Mask = '*'
+		default:
+			credentialsView.Title = gui.Tr.CredentialsPassphrase
 			credentialsView.Mask = '*'
 		}
-		err := gui.switchFocus(g, currentView, credentialsView)
-		if err != nil {
+
+		if err := gui.pushContext(gui.Contexts.Credentials.Context); err != nil {
 			return err
 		}
+
 		gui.RenderCommitLength()
 		return nil
 	})
 
-	// wait for username/passwords input
+	// wait for username/passwords/passphrase input
 	userInput := <-gui.credentials
 	return userInput + "\n"
 }
@@ -36,60 +42,44 @@ func (gui *Gui) waitForPassUname(g *gocui.Gui, currentView *gocui.View, passOrUn
 func (gui *Gui) handleSubmitCredential(g *gocui.Gui, v *gocui.View) error {
 	message := gui.trimmedContent(v)
 	gui.credentials <- message
-	v.Clear()
-	_ = v.SetCursor(0, 0)
-	_, _ = g.SetViewOnBottom("credentials")
-	nextView, err := gui.g.View("confirmation")
-	if err != nil {
-		nextView = gui.getFilesView()
-	}
-	err = gui.switchFocus(g, nil, nextView)
-	if err != nil {
+	gui.clearEditorView(v)
+	if err := gui.returnFromContext(); err != nil {
 		return err
 	}
+
 	return gui.refreshSidePanels(refreshOptions{})
 }
 
 func (gui *Gui) handleCloseCredentialsView(g *gocui.Gui, v *gocui.View) error {
-	_, err := g.SetViewOnBottom("credentials")
-	if err != nil {
-		return err
-	}
-
 	gui.credentials <- ""
-	return gui.switchFocus(g, nil, gui.getFilesView())
+	return gui.returnFromContext()
 }
 
-func (gui *Gui) handleCredentialsViewFocused(g *gocui.Gui, v *gocui.View) error {
-	if _, err := g.SetViewOnTop("credentials"); err != nil {
-		return err
-	}
+func (gui *Gui) handleCredentialsViewFocused() error {
+	keybindingConfig := gui.Config.GetUserConfig().Keybinding
 
-	message := gui.Tr.TemplateLocalize(
-		"CloseConfirm",
-		Teml{
-			"keyBindClose":   "esc",
-			"keyBindConfirm": "enter",
+	message := utils.ResolvePlaceholderString(
+		gui.Tr.CloseConfirm,
+		map[string]string{
+			"keyBindClose":   gui.getKeyDisplay(keybindingConfig.Universal.Return),
+			"keyBindConfirm": gui.getKeyDisplay(keybindingConfig.Universal.Confirm),
 		},
 	)
-	gui.renderString(g, "options", message)
+
+	gui.renderString("options", message)
 	return nil
 }
 
-// HandleCredentialsPopup handles the views after executing a command that might ask for credentials
-func (gui *Gui) HandleCredentialsPopup(g *gocui.Gui, popupOpened bool, cmdErr error) {
-	if popupOpened {
-		_, _ = gui.g.SetViewOnBottom("credentials")
-	}
+// handleCredentialsPopup handles the views after executing a command that might ask for credentials
+func (gui *Gui) handleCredentialsPopup(cmdErr error) {
 	if cmdErr != nil {
 		errMessage := cmdErr.Error()
-		if strings.Contains(errMessage, "Invalid username or password") {
-			errMessage = gui.Tr.SLocalize("PassUnameWrong")
+		if strings.Contains(errMessage, "Invalid username, password or passphrase") {
+			errMessage = gui.Tr.PassUnameWrong
 		}
-		// we are not logging this error because it may contain a password
-		_ = gui.createSpecificErrorPanel(errMessage, gui.getFilesView(), false)
+		// we are not logging this error because it may contain a password or a passphrase
+		_ = gui.createErrorPanel(errMessage)
 	} else {
-		_ = gui.closeConfirmationPrompt(g, true)
-		_ = gui.refreshSidePanels(refreshOptions{mode: ASYNC})
+		_ = gui.closeConfirmationPrompt(false)
 	}
 }

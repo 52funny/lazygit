@@ -14,6 +14,8 @@ Default path for the config file:
     scrollHeight: 2 # how many lines you scroll by
     scrollPastBottom: true # enable scrolling past the bottom
     sidePanelWidth: 0.3333 # number from 0 to 1
+    expandFocusedSidePanel: false
+    mainPanelSplitMode: 'flexible' # one of 'horizontal' | 'flexible' | 'vertical'
     theme:
       lightTheme: false # For terminals with a light background
       activeBorderColor:
@@ -41,13 +43,23 @@ Default path for the config file:
       manualCommit: false
       # extra args passed to `git merge`, e.g. --no-ff
       args: ""
+    pull:
+      mode: 'merge' # one of 'merge' | 'rebase' | 'ff-only'
     skipHookPrefix: WIP
     autoFetch: true
+    branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
+    allBranchesLogCmd: "git log --graph --all --color=always --abbrev-commit --decorate --date=relative  --pretty=medium"
+    overrideGpg: false # prevents lazygit from spawning a separate process when using GPG
+    disableForcePushing: false
   update:
     method: prompt # can be: prompt | background | never
     days: 14 # how often an update is checked for
   reporting: 'undetermined' # one of: 'on' | 'off' | 'undetermined'
   confirmOnQuit: false
+  # determines whether hitting 'esc' will quit the application when there is nothing to cancel/close
+  quitOnTopLevelReturn: true
+  disableStartupPopups: false
+  notARepository: 'prompt' # one of: 'prompt' | 'create' | 'skip'
   keybinding:
     universal:
       quit: 'q'
@@ -73,6 +85,8 @@ Default path for the config file:
       optionMenu-alt1: '?' # show help menu
       select: '<space>'
       goInto: '<enter>'
+      confirm: '<enter>'
+      confirm-alt1: 'y'
       remove: 'd'
       new: 'n'
       edit: 'e'
@@ -96,8 +110,11 @@ Default path for the config file:
       undo: 'z'
       redo: '<c-z>'
       filteringMenu: '<c-s>'
-      diffingMenu: '<c-e>'
+      diffingMenu: 'W'
+      diffingMenu-alt: '<c-e>' # deprecated
       copyToClipboard: '<c-o>'
+      submitEditorText: '<enter>'
+      appendNewline: '<tab>'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -143,6 +160,7 @@ Default path for the config file:
       tagCommit: 'T'
       checkoutCommit: '<space>'
       resetCherryPick: '<c-R>'
+      copyCommitMessageToClipboard: '<c-y>'
     stash:
       popStash: 'g'
     commitFiles:
@@ -152,6 +170,10 @@ Default path for the config file:
       toggleDragSelect-alt: 'V'
       toggleSelectHunk: 'a'
       pickBothHunks: 'b'
+    submodules:
+      init: 'i'
+      update: 'u'
+      bulkMenu: 'b'
 ```
 
 ## Platform Defaults
@@ -183,7 +205,7 @@ for users of VSCode
 
 ```yaml
   os:
-    openCommand: 'code -r {{filename}}'
+    openCommand: 'code -rg {{filename}}'
 ```
 
 ## Color Attributes
@@ -236,7 +258,7 @@ If you struggle to see the selected line I recomment using the reverse attribute
 
 ## Example Coloring
 
-![border example](/docs/resources/colored-border-example.png)
+![border example](../../assets/colored-border-example.png)
 
 ## Keybindings
 
@@ -305,4 +327,38 @@ Example:
       my_project: # This is repository folder name
         pattern: "^\\w+\\/(\\w+-\\w+)"
         replace: "[$1] "
+```
+
+## Custom git log command
+
+You can override the `git log` command that's used to render the log of the selected branch like so:
+
+```
+git:
+  branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium --oneline {{branchName}} --"
+```
+
+Result:
+
+![](https://i.imgur.com/Nibq35B.png)
+
+## Launching not in a repository behaviour
+
+By default, when launching lazygit from a directory that is not a repository,
+you will be prompted to choose if you would like to initialize a repo. You can
+override this behaviour in the config with one of the following:
+
+```yaml
+# for default prompting behaviour
+notARepository: 'prompt'
+```
+
+```yaml
+# to skip and initialize a new repo
+notARepository: 'create'
+```
+
+```yaml
+# to skip without creating a new repo
+notARepository: 'skip'
 ```

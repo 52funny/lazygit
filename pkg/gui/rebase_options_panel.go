@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/commands"
 )
 
-func (gui *Gui) handleCreateRebaseOptionsMenu(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreateRebaseOptionsMenu() error {
 	options := []string{"continue", "abort"}
 
-	if gui.GitCommand.WorkingTreeState() == "rebasing" {
+	if gui.GitCommand.WorkingTreeState() == commands.REBASE_MODE_REBASING {
 		options = append(options, "skip")
 	}
 
@@ -27,10 +27,10 @@ func (gui *Gui) handleCreateRebaseOptionsMenu(g *gocui.Gui, v *gocui.View) error
 	}
 
 	var title string
-	if gui.GitCommand.WorkingTreeState() == "merging" {
-		title = gui.Tr.SLocalize("MergeOptionsTitle")
+	if gui.GitCommand.WorkingTreeState() == commands.REBASE_MODE_MERGING {
+		title = gui.Tr.MergeOptionsTitle
 	} else {
-		title = gui.Tr.SLocalize("RebaseOptionsTitle")
+		title = gui.Tr.RebaseOptionsTitle
 	}
 
 	return gui.createMenu(title, menuItems, createMenuOptions{showCancel: true})
@@ -39,15 +39,15 @@ func (gui *Gui) handleCreateRebaseOptionsMenu(g *gocui.Gui, v *gocui.View) error
 func (gui *Gui) genericMergeCommand(command string) error {
 	status := gui.GitCommand.WorkingTreeState()
 
-	if status != "merging" && status != "rebasing" {
-		return gui.createErrorPanel(gui.Tr.SLocalize("NotMergingOrRebasing"))
+	if status != commands.REBASE_MODE_MERGING && status != commands.REBASE_MODE_REBASING {
+		return gui.createErrorPanel(gui.Tr.NotMergingOrRebasing)
 	}
 
 	commandType := strings.Replace(status, "ing", "e", 1)
 	// we should end up with a command like 'git merge --continue'
 
 	// it's impossible for a rebase to require a commit so we'll use a subprocess only if it's a merge
-	if status == "merging" && command != "abort" && gui.Config.GetUserConfig().GetBool("git.merging.manualCommit") {
+	if status == commands.REBASE_MODE_MERGING && command != "abort" && gui.Config.GetUserConfig().Git.Merging.ManualCommit {
 		sub := gui.OSCommand.PrepareSubProcess("git", commandType, fmt.Sprintf("--%s", command))
 		if sub != nil {
 			gui.SubProcess = sub
@@ -55,7 +55,7 @@ func (gui *Gui) genericMergeCommand(command string) error {
 		}
 		return nil
 	}
-	result := gui.GitCommand.GenericMerge(commandType, command)
+	result := gui.GitCommand.GenericMergeOrRebaseAction(commandType, command)
 	if err := gui.handleGenericMergeCommandResult(result); err != nil {
 		return err
 	}
@@ -78,13 +78,21 @@ func (gui *Gui) handleGenericMergeCommandResult(result error) error {
 		// assume in this case that we're already done
 		return nil
 	} else if strings.Contains(result.Error(), "When you have resolved this problem") || strings.Contains(result.Error(), "fix conflicts") || strings.Contains(result.Error(), "Resolve all conflicts manually") {
-		return gui.createConfirmationPanel(gui.g, gui.getFilesView(), true, gui.Tr.SLocalize("FoundConflictsTitle"), gui.Tr.SLocalize("FoundConflicts"),
-			func(g *gocui.Gui, v *gocui.View) error {
-				return nil
-			}, func(g *gocui.Gui, v *gocui.View) error {
+		return gui.ask(askOpts{
+			title:               gui.Tr.FoundConflictsTitle,
+			prompt:              gui.Tr.FoundConflicts,
+			handlersManageFocus: true,
+			handleConfirm: func() error {
+				return gui.pushContext(gui.Contexts.Files.Context)
+			},
+			handleClose: func() error {
+				if err := gui.returnFromContext(); err != nil {
+					return err
+				}
+
 				return gui.genericMergeCommand("abort")
 			},
-		)
+		})
 	} else {
 		return gui.createErrorPanel(result.Error())
 	}

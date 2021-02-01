@@ -16,13 +16,21 @@
   <kbd>+</kbd>: next screen mode (normal/half/fullscreen)
   <kbd>_</kbd>: prev screen mode
   <kbd>:</kbd>: execute custom command
+  <kbd>|</kbd>: view scoping options
+  <kbd>W</kbd>: open diff menu
+  <kbd>ctrl+e</kbd>: open diff menu
 </pre>
 
-## Branches Panel
+## List Panel Navigation
 
 <pre>
   <kbd>]</kbd>: next tab
   <kbd>[</kbd>: previous tab
+  <kbd>,</kbd>: previous page
+  <kbd>.</kbd>: next page
+  <kbd><</kbd>: scroll to top
+  <kbd>/</kbd>: start search
+  <kbd>></kbd>: scroll to bottom
 </pre>
 
 ## Branches Panel (Branches Tab)
@@ -40,28 +48,22 @@
   <kbd>f</kbd>: fast-forward this branch from its upstream
   <kbd>g</kbd>: view reset options
   <kbd>R</kbd>: rename branch
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+  <kbd>ctrl+o</kbd>: copy branch name to clipboard
+  <kbd>enter</kbd>: view commits
 </pre>
 
 ## Branches Panel (Remote Branches (in Remotes tab))
 
 <pre>
-  <kbd>esc</kbd>: return to remotes list
+  <kbd>esc</kbd>: Return to remotes list
   <kbd>g</kbd>: view reset options
+  <kbd>enter</kbd>: view commits
   <kbd>space</kbd>: checkout
+  <kbd>n</kbd>: new branch
   <kbd>M</kbd>: merge into currently checked out branch
   <kbd>d</kbd>: delete branch
   <kbd>r</kbd>: rebase checked-out branch onto this branch
   <kbd>u</kbd>: set as upstream of checked-out branch
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
 </pre>
 
 ## Branches Panel (Remotes Tab)
@@ -71,11 +73,19 @@
   <kbd>n</kbd>: add new remote
   <kbd>d</kbd>: remove remote
   <kbd>e</kbd>: edit remote
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+</pre>
+
+## Branches Panel (Sub-commits)
+
+<pre>
+  <kbd>enter</kbd>: view commit's files
+  <kbd>space</kbd>: checkout commit
+  <kbd>g</kbd>: view reset options
+  <kbd>n</kbd>: new branch
+  <kbd>c</kbd>: copy commit (cherry-pick)
+  <kbd>C</kbd>: copy commit range (cherry-pick)
+  <kbd>ctrl+r</kbd>: reset cherry-picked (copied) commits selection
+  <kbd>ctrl+o</kbd>: copy commit SHA to clipboard
 </pre>
 
 ## Branches Panel (Tags Tab)
@@ -86,37 +96,22 @@
   <kbd>P</kbd>: push tag
   <kbd>n</kbd>: create tag
   <kbd>g</kbd>: view reset options
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+  <kbd>enter</kbd>: view commits
 </pre>
 
 ## Commit Files Panel
 
 <pre>
-  <kbd>esc</kbd>: go back
+  <kbd>ctrl+o</kbd>: copy the committed file name to the clipboard
   <kbd>c</kbd>: checkout file
   <kbd>d</kbd>: discard this commit's changes to this file
   <kbd>o</kbd>: open file
+  <kbd>e</kbd>: edit file
   <kbd>space</kbd>: toggle file included in patch
   <kbd>enter</kbd>: enter file to add selected lines to the patch
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
 </pre>
 
-## Commits Panel
-
-<pre>
-  <kbd>]</kbd>: next tab
-  <kbd>[</kbd>: previous tab
-</pre>
-
-## Commits Panel (Commits Tab)
+## Commits Panel (Commits)
 
 <pre>
   <kbd>s</kbd>: squash down
@@ -134,33 +129,29 @@
   <kbd>p</kbd>: pick commit (when mid-rebase)
   <kbd>t</kbd>: revert commit
   <kbd>c</kbd>: copy commit (cherry-pick)
+  <kbd>ctrl+o</kbd>: copy commit SHA to clipboard
   <kbd>C</kbd>: copy commit range (cherry-pick)
   <kbd>v</kbd>: paste commits (cherry-pick)
   <kbd>enter</kbd>: view commit's files
   <kbd>space</kbd>: checkout commit
-  <kbd>i</kbd>: select commit to diff with another commit
+  <kbd>n</kbd>: create new branch off of commit
   <kbd>T</kbd>: tag commit
   <kbd>ctrl+r</kbd>: reset cherry-picked (copied) commits selection
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
 </pre>
 
 ## Commits Panel (Reflog Tab)
 
 <pre>
+  <kbd>enter</kbd>: view commit's files
   <kbd>space</kbd>: checkout commit
   <kbd>g</kbd>: view reset options
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+  <kbd>c</kbd>: copy commit (cherry-pick)
+  <kbd>C</kbd>: copy commit range (cherry-pick)
+  <kbd>ctrl+r</kbd>: reset cherry-picked (copied) commits selection
+  <kbd>ctrl+o</kbd>: copy commit SHA to clipboard
 </pre>
 
-## Files Panel
+## Files Panel (Files)
 
 <pre>
   <kbd>c</kbd>: commit changes
@@ -179,12 +170,21 @@
   <kbd>D</kbd>: view reset options
   <kbd>enter</kbd>: stage individual hunks/lines
   <kbd>f</kbd>: fetch
+  <kbd>ctrl+o</kbd>: copy the file name to the clipboard
   <kbd>g</kbd>: view upstream reset options
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+</pre>
+
+## Files Panel (Submodules)
+
+<pre>
+  <kbd>ctrl+o</kbd>: copy submodule name to clipboard
+  <kbd>enter</kbd>: enter submodule
+  <kbd>d</kbd>: view reset and remove submodule options
+  <kbd>u</kbd>: update submodule
+  <kbd>n</kbd>: add new submodule
+  <kbd>e</kbd>: update submodule URL
+  <kbd>i</kbd>: initialize submodule
+  <kbd>b</kbd>: view bulk submodule options
 </pre>
 
 ## Main Panel (Merging)
@@ -211,6 +211,7 @@
 
 <pre>
   <kbd>esc</kbd>: exit line-by-line mode
+  <kbd>o</kbd>: open file
   <kbd>▲</kbd>: select previous line
   <kbd>▼</kbd>: select next line
   <kbd>◄</kbd>: select previous hunk
@@ -228,6 +229,7 @@
   <kbd>space</kbd>: toggle line staged / unstaged
   <kbd>d</kbd>: delete change (git reset)
   <kbd>tab</kbd>: switch to other panel
+  <kbd>o</kbd>: open file
   <kbd>▲</kbd>: select previous line
   <kbd>▼</kbd>: select next line
   <kbd>◄</kbd>: select previous hunk
@@ -246,25 +248,16 @@
 
 <pre>
   <kbd>esc</kbd>: close menu
-  <kbd>q</kbd>: close menu
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
 </pre>
 
 ## Stash Panel
 
 <pre>
+  <kbd>enter</kbd>: view stash entry's files
   <kbd>space</kbd>: apply
   <kbd>g</kbd>: pop
   <kbd>d</kbd>: drop
-  <kbd>,</kbd>: previous page
-  <kbd>.</kbd>: next page
-  <kbd><</kbd>: scroll to top
-  <kbd>/</kbd>: start search
-  <kbd>></kbd>: scroll to bottom
+  <kbd>n</kbd>: new branch
 </pre>
 
 ## Status Panel

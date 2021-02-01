@@ -1,16 +1,20 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/jesseduffield/termbox-go"
 )
 
 // SplitLines takes a multiline string and splits it on newlines
@@ -99,6 +103,7 @@ func Loader() string {
 func ResolvePlaceholderString(str string, arguments map[string]string) string {
 	for key, value := range arguments {
 		str = strings.Replace(str, "{{"+key+"}}", value, -1)
+		str = strings.Replace(str, "{{."+key+"}}", value, -1)
 	}
 	return str
 }
@@ -321,4 +326,53 @@ func FindStringSubmatch(str string, regexpStr string) (bool, []string) {
 	re := regexp.MustCompile(regexpStr)
 	match := re.FindStringSubmatch(str)
 	return len(match) > 0, match
+}
+
+func StringArraysOverlap(strArrA []string, strArrB []string) bool {
+	for _, first := range strArrA {
+		for _, second := range strArrB {
+			if first == second {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func MustConvertToInt(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
+
+func ResolveTemplate(templateStr string, object interface{}) (string, error) {
+	tmpl, err := template.New("template").Parse(templateStr)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, object); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// Safe will close termbox if a panic occurs so that we don't end up in a malformed
+// terminal state
+func Safe(f func()) {
+	panicking := true
+	defer func() {
+		if panicking {
+			termbox.Close()
+		}
+	}()
+
+	f()
+
+	panicking = false
 }

@@ -26,28 +26,60 @@ func (gui *Gui) recordCurrentDirectory() error {
 
 func (gui *Gui) handleQuitWithoutChangingDirectory(g *gocui.Gui, v *gocui.View) error {
 	gui.State.RetainOriginalDir = true
-	return gui.quit(v)
+	return gui.quit()
 }
 
-func (gui *Gui) handleQuit(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleQuit() error {
 	gui.State.RetainOriginalDir = false
-	return gui.quit(v)
+	return gui.quit()
 }
 
-func (gui *Gui) quit(v *gocui.View) error {
+func (gui *Gui) handleTopLevelReturn(g *gocui.Gui, v *gocui.View) error {
+	currentContext := gui.currentContext()
+
+	parentContext, hasParent := currentContext.GetParentContext()
+	if hasParent && currentContext != nil && parentContext != nil {
+		// TODO: think about whether this should be marked as a return rather than adding to the stack
+		return gui.pushContext(parentContext)
+	}
+
+	for _, mode := range gui.modeStatuses() {
+		if mode.isActive() {
+			return mode.reset()
+		}
+	}
+
+	repoPathStack := gui.State.RepoPathStack
+	if len(repoPathStack) > 0 {
+		n := len(repoPathStack) - 1
+
+		path := repoPathStack[n]
+
+		gui.State.RepoPathStack = repoPathStack[:n]
+
+		return gui.dispatchSwitchToRepo(path)
+	}
+
+	if gui.Config.GetUserConfig().QuitOnTopLevelReturn {
+		return gui.handleQuit()
+	}
+
+	return nil
+}
+
+func (gui *Gui) quit() error {
 	if gui.State.Updating {
-		return gui.createUpdateQuitConfirmation(gui.g, v)
+		return gui.createUpdateQuitConfirmation()
 	}
-	if gui.inDiffMode() {
-		return gui.exitDiffMode()
-	}
-	if gui.inFilterMode() {
-		return gui.exitFilterMode()
-	}
-	if gui.Config.GetUserConfig().GetBool("confirmOnQuit") {
-		return gui.createConfirmationPanel(gui.g, v, true, "", gui.Tr.SLocalize("ConfirmQuit"), func(g *gocui.Gui, v *gocui.View) error {
-			return gocui.ErrQuit
-		}, nil)
+
+	if gui.Config.GetUserConfig().ConfirmOnQuit {
+		return gui.ask(askOpts{
+			title:  "",
+			prompt: gui.Tr.ConfirmQuit,
+			handleConfirm: func() error {
+				return gocui.ErrQuit
+			},
+		})
 	}
 
 	return gocui.ErrQuit

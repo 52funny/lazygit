@@ -40,8 +40,8 @@ changelog:
       - '^bump'
 brews:
   -
-    # Reporitory to push the tap to.
-    github:
+    # Repository to push the tap to.
+    tap:
       owner: jesseduffield
       name: homebrew-lazygit
 
@@ -61,5 +61,3 @@ brews:
     # conflicts:
     #   - svn
     #   - bash
-
-  # test comment to see if goreleaser only releases on new commits

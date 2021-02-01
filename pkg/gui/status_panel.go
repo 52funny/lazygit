@@ -6,14 +6,15 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
 // never call this on its own, it should only be called from within refreshCommits()
 func (gui *Gui) refreshStatus() {
-	gui.State.RefreshingStatusMutex.Lock()
-	defer gui.State.RefreshingStatusMutex.Unlock()
+	gui.Mutexes.RefreshingStatusMutex.Lock()
+	defer gui.Mutexes.RefreshingStatusMutex.Unlock()
 
 	currentBranch := gui.currentBranch()
 	if currentBranch == nil {
@@ -33,7 +34,7 @@ func (gui *Gui) refreshStatus() {
 		status = utils.ColoredString(fmt.Sprintf("↑%s↓%s ", currentBranch.Pushables, currentBranch.Pullables), trackColor)
 	}
 
-	if gui.GitCommand.WorkingTreeState() != "normal" {
+	if gui.GitCommand.WorkingTreeState() != commands.REBASE_MODE_NORMAL {
 		status += utils.ColoredString(fmt.Sprintf("(%s) ", gui.GitCommand.WorkingTreeState()), color.FgYellow)
 	}
 
@@ -57,48 +58,50 @@ func cursorInSubstring(cx int, prefix string, substring string) bool {
 
 func (gui *Gui) handleCheckForUpdate(g *gocui.Gui, v *gocui.View) error {
 	gui.Updater.CheckForNewUpdate(gui.onUserUpdateCheckFinish, true)
-	return gui.createLoaderPanel(gui.g, v, gui.Tr.SLocalize("CheckingForUpdates"))
+	return gui.createLoaderPanel(gui.Tr.CheckingForUpdates)
 }
 
 func (gui *Gui) handleStatusClick(g *gocui.Gui, v *gocui.View) error {
+	// TODO: move into some abstraction (status is currently not a listViewContext where a lot of this code lives)
+	if gui.popupPanelFocused() {
+		return nil
+	}
+
 	currentBranch := gui.currentBranch()
+	if currentBranch == nil {
+		// need to wait for branches to refresh
+		return nil
+	}
+
+	if err := gui.pushContext(gui.Contexts.Status.Context); err != nil {
+		return err
+	}
 
 	cx, _ := v.Cursor()
 	upstreamStatus := fmt.Sprintf("↑%s↓%s", currentBranch.Pushables, currentBranch.Pullables)
 	repoName := utils.GetCurrentRepoName()
 	switch gui.GitCommand.WorkingTreeState() {
-	case "rebasing", "merging":
+	case commands.REBASE_MODE_REBASING, commands.REBASE_MODE_MERGING:
 		workingTreeStatus := fmt.Sprintf("(%s)", gui.GitCommand.WorkingTreeState())
 		if cursorInSubstring(cx, upstreamStatus+" ", workingTreeStatus) {
-			return gui.handleCreateRebaseOptionsMenu(gui.g, v)
+			return gui.handleCreateRebaseOptionsMenu()
 		}
 		if cursorInSubstring(cx, upstreamStatus+" "+workingTreeStatus+" ", repoName) {
-			return gui.handleCreateRecentReposMenu(gui.g, v)
+			return gui.handleCreateRecentReposMenu()
 		}
 	default:
 		if cursorInSubstring(cx, upstreamStatus+" ", repoName) {
-			return gui.handleCreateRecentReposMenu(gui.g, v)
+			return gui.handleCreateRecentReposMenu()
 		}
 	}
 
-	return gui.handleStatusSelect(gui.g, v)
+	return gui.handleStatusSelect()
 }
 
-func (gui *Gui) handleStatusSelect(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleStatusSelect() error {
+	// TODO: move into some abstraction (status is currently not a listViewContext where a lot of this code lives)
 	if gui.popupPanelFocused() {
 		return nil
-	}
-
-	gui.State.SplitMainPanel = false
-
-	if _, err := gui.g.SetCurrentView(v.Name()); err != nil {
-		return err
-	}
-
-	gui.getMainView().Title = ""
-
-	if gui.inDiffMode() {
-		return gui.renderDiff()
 	}
 
 	magenta := color.New(color.FgMagenta)
@@ -112,17 +115,23 @@ func (gui *Gui) handleStatusSelect(g *gocui.Gui, v *gocui.View) error {
 			"Tutorial: https://youtu.be/VDXvbHZYeKY",
 			"Raise an Issue: https://github.com/jesseduffield/lazygit/issues",
 			magenta.Sprint("Become a sponsor (github is matching all donations for 12 months): https://github.com/sponsors/jesseduffield"), // caffeine ain't free
+			gui.Tr.ReleaseNotes,
 		}, "\n\n")
 
-	return gui.newStringTask("main", dashboardString)
+	return gui.refreshMainViews(refreshMainOpts{
+		main: &viewUpdateOpts{
+			title: "",
+			task:  gui.createRenderStringTask(dashboardString),
+		},
+	})
 }
 
 func (gui *Gui) handleOpenConfig(g *gocui.Gui, v *gocui.View) error {
-	return gui.openFile(gui.Config.GetUserConfig().ConfigFileUsed())
+	return gui.openFile(gui.Config.GetUserConfigPath())
 }
 
 func (gui *Gui) handleEditConfig(g *gocui.Gui, v *gocui.View) error {
-	filename := gui.Config.GetUserConfig().ConfigFileUsed()
+	filename := gui.Config.GetUserConfigPath()
 	return gui.editFile(filename)
 }
 
@@ -141,11 +150,11 @@ func lazygitTitle() string {
 func (gui *Gui) workingTreeState() string {
 	rebaseMode, _ := gui.GitCommand.RebaseMode()
 	if rebaseMode != "" {
-		return "rebasing"
+		return commands.REBASE_MODE_REBASING
 	}
 	merging, _ := gui.GitCommand.IsInMergeState()
 	if merging {
-		return "merging"
+		return commands.REBASE_MODE_MERGING
 	}
-	return "normal"
+	return commands.REBASE_MODE_NORMAL
 }

@@ -15,9 +15,10 @@ import (
 
 	"github.com/kardianos/osext"
 
-	"github.com/jesseduffield/lazygit/pkg/commands"
+	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,8 +26,8 @@ import (
 type Updater struct {
 	Log       *logrus.Entry
 	Config    config.AppConfigurer
-	OSCommand *commands.OSCommand
-	Tr        *i18n.Localizer
+	OSCommand *oscommands.OSCommand
+	Tr        *i18n.TranslationSet
 }
 
 // Updaterer implements the check and update methods
@@ -40,7 +41,7 @@ const (
 )
 
 // NewUpdater creates a new updater
-func NewUpdater(log *logrus.Entry, config config.AppConfigurer, osCommand *commands.OSCommand, tr *i18n.Localizer) (*Updater, error) {
+func NewUpdater(log *logrus.Entry, config config.AppConfigurer, osCommand *oscommands.OSCommand, tr *i18n.TranslationSet) (*Updater, error) {
 	contextLogger := log.WithField("context", "updates")
 
 	return &Updater{
@@ -91,9 +92,18 @@ func (u *Updater) majorVersionDiffers(oldVersion, newVersion string) bool {
 	return strings.Split(oldVersion, ".")[0] != strings.Split(newVersion, ".")[0]
 }
 
+func (u *Updater) currentVersion() string {
+	versionNumber := u.Config.GetVersion()
+	if versionNumber == "unversioned" {
+		return versionNumber
+	}
+
+	return fmt.Sprintf("v%s", u.Config.GetVersion())
+}
+
 func (u *Updater) checkForNewUpdate() (string, error) {
 	u.Log.Info("Checking for an updated version")
-	currentVersion := u.Config.GetVersion()
+	currentVersion := u.currentVersion()
 	if err := u.RecordLastUpdateCheck(); err != nil {
 		return "", err
 	}
@@ -106,13 +116,12 @@ func (u *Updater) checkForNewUpdate() (string, error) {
 	u.Log.Info("New version is " + newVersion)
 
 	if newVersion == currentVersion {
-		return "", errors.New(u.Tr.SLocalize("OnLatestVersionErr"))
+		return "", errors.New(u.Tr.OnLatestVersionErr)
 	}
 
 	if u.majorVersionDiffers(currentVersion, newVersion) {
-		errMessage := u.Tr.TemplateLocalize(
-			"MajorVersionErr",
-			i18n.Teml{
+		errMessage := utils.ResolvePlaceholderString(
+			u.Tr.MajorVersionErr, map[string]string{
 				"newVersion":     newVersion,
 				"currentVersion": currentVersion,
 			},
@@ -126,12 +135,12 @@ func (u *Updater) checkForNewUpdate() (string, error) {
 	}
 	u.Log.Info("Checking for resource at url " + rawUrl)
 	if !u.verifyResourceFound(rawUrl) {
-		errMessage := u.Tr.TemplateLocalize(
-			"CouldNotFindBinaryErr",
-			i18n.Teml{
+		errMessage := utils.ResolvePlaceholderString(
+			u.Tr.CouldNotFindBinaryErr, map[string]string{
 				"url": rawUrl,
 			},
 		)
+
 		return "", errors.New(errMessage)
 	}
 	u.Log.Info("Verified resource is available, ready to update")
@@ -145,12 +154,12 @@ func (u *Updater) CheckForNewUpdate(onFinish func(string, error) error, userRequ
 		return
 	}
 
-	go func() {
+	go utils.Safe(func() {
 		newVersion, err := u.checkForNewUpdate()
 		if err = onFinish(newVersion, err); err != nil {
 			u.Log.Error(err)
 		}
-	}()
+	})
 }
 
 func (u *Updater) skipUpdateCheck() bool {
@@ -172,14 +181,14 @@ func (u *Updater) skipUpdateCheck() bool {
 	}
 
 	userConfig := u.Config.GetUserConfig()
-	if userConfig.Get("update.method") == "never" {
+	if userConfig.Update.Method == "never" {
 		u.Log.Info("Update method is set to never so we won't check for an update")
 		return true
 	}
 
 	currentTimestamp := time.Now().Unix()
 	lastUpdateCheck := u.Config.GetAppState().LastUpdateCheck
-	days := userConfig.GetInt64("update.days")
+	days := userConfig.Update.Days
 
 	if (currentTimestamp-lastUpdateCheck)/(60*60*24) < days {
 		u.Log.Info("Last update was too recent so we won't check for an update")
@@ -214,12 +223,16 @@ func (u *Updater) mappedArch(arch string) string {
 	return arch
 }
 
+func (u *Updater) zipExtension() string {
+	if runtime.GOOS == "windows" {
+		return "zip"
+	}
+
+	return "tar.gz"
+}
+
 // example: https://github.com/jesseduffield/lazygit/releases/download/v0.1.73/lazygit_0.1.73_Darwin_x86_64.tar.gz
 func (u *Updater) getBinaryUrl(newVersion string) (string, error) {
-	extension := "tar.gz"
-	if runtime.GOOS == "windows" {
-		extension = "zip"
-	}
 	url := fmt.Sprintf(
 		"%s/releases/download/%s/lazygit_%s_%s_%s.%s",
 		PROJECT_URL,
@@ -227,7 +240,7 @@ func (u *Updater) getBinaryUrl(newVersion string) (string, error) {
 		newVersion[1:],
 		u.mappedOs(runtime.GOOS),
 		u.mappedArch(runtime.GOARCH),
-		extension,
+		u.zipExtension(),
 	)
 	u.Log.Info("Url for latest release is " + url)
 	return url, nil
@@ -235,12 +248,12 @@ func (u *Updater) getBinaryUrl(newVersion string) (string, error) {
 
 // Update downloads the latest binary and replaces the current binary with it
 func (u *Updater) Update(newVersion string, onFinish func(error) error) {
-	go func() {
+	go utils.Safe(func() {
 		err := u.update(newVersion)
 		if err = onFinish(err); err != nil {
 			u.Log.Error(err)
 		}
-	}()
+	})
 }
 
 func (u *Updater) update(newVersion string) error {
@@ -256,11 +269,16 @@ func (u *Updater) downloadAndInstall(rawUrl string) error {
 	configDir := u.Config.GetUserConfigDir()
 	u.Log.Info("Download directory is " + configDir)
 
-	tempPath := filepath.Join(configDir, "temp_lazygit")
-	u.Log.Info("Temp path to binary is " + tempPath)
+	zipPath := filepath.Join(configDir, "temp_lazygit."+u.zipExtension())
+	u.Log.Info("Temp path to tarball/zip file is " + zipPath)
 
-	// Create the file
-	out, err := os.Create(tempPath)
+	// remove existing zip file
+	if err := os.RemoveAll(zipPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	// Create the zip file
+	out, err := os.Create(zipPath)
 	if err != nil {
 		return err
 	}
@@ -284,6 +302,18 @@ func (u *Updater) downloadAndInstall(rawUrl string) error {
 		return err
 	}
 
+	u.Log.Info("untarring tarball/unzipping zip file")
+	if err := u.OSCommand.RunCommand("tar -zxf %s %s", u.OSCommand.Quote(zipPath), "lazygit"); err != nil {
+		return err
+	}
+
+	// the `tar` terminal cannot store things in a new location without permission
+	// so it creates it in the current directory. As such our path is fairly simple.
+	// You won't see it because it's gitignored.
+	tempLazygitFilePath := "lazygit"
+
+	u.Log.Infof("Path to temp binary is %s", tempLazygitFilePath)
+
 	// get the path of the current binary
 	binaryPath, err := osext.Executable()
 	if err != nil {
@@ -292,12 +322,12 @@ func (u *Updater) downloadAndInstall(rawUrl string) error {
 	u.Log.Info("Binary path is " + binaryPath)
 
 	// Verify the main file exists
-	if _, err := os.Stat(tempPath); err != nil {
+	if _, err := os.Stat(zipPath); err != nil {
 		return err
 	}
 
 	// swap out the old binary for the new one
-	err = os.Rename(tempPath, binaryPath)
+	err = os.Rename(tempLazygitFilePath, binaryPath)
 	if err != nil {
 		return err
 	}

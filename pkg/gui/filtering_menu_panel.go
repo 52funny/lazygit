@@ -15,8 +15,8 @@ func (gui *Gui) handleCreateFilteringMenuPanel(g *gocui.Gui, v *gocui.View) erro
 	fileName := ""
 	switch v.Name() {
 	case "files":
-		file, err := gui.getSelectedFile()
-		if err == nil {
+		file := gui.getSelectedFile()
+		if file != nil {
 			fileName = file.Name
 		}
 	case "commitFiles":
@@ -30,33 +30,36 @@ func (gui *Gui) handleCreateFilteringMenuPanel(g *gocui.Gui, v *gocui.View) erro
 
 	if fileName != "" {
 		menuItems = append(menuItems, &menuItem{
-			displayString: fmt.Sprintf("%s '%s'", gui.Tr.SLocalize("filterBy"), fileName),
+			displayString: fmt.Sprintf("%s '%s'", gui.Tr.LcFilterBy, fileName),
 			onPress: func() error {
-				gui.State.FilterPath = fileName
+				gui.State.Modes.Filtering.Path = fileName
 				return gui.Errors.ErrRestart
 			},
 		})
 	}
 
 	menuItems = append(menuItems, &menuItem{
-		displayString: gui.Tr.SLocalize("filterPathOption"),
+		displayString: gui.Tr.LcFilterPathOption,
 		onPress: func() error {
-			return gui.createPromptPanel(gui.g, v, gui.Tr.SLocalize("enterFileName"), "", func(g *gocui.Gui, promptView *gocui.View) error {
-				gui.State.FilterPath = strings.TrimSpace(promptView.Buffer())
-				return gui.Errors.ErrRestart
+			return gui.prompt(promptOpts{
+				title: gui.Tr.LcEnterFileName,
+				handleConfirm: func(response string) error {
+					gui.State.Modes.Filtering.Path = strings.TrimSpace(response)
+					return gui.Errors.ErrRestart
+				},
 			})
 		},
 	})
 
-	if gui.inFilterMode() {
+	if gui.State.Modes.Filtering.Active() {
 		menuItems = append(menuItems, &menuItem{
-			displayString: gui.Tr.SLocalize("exitFilterMode"),
+			displayString: gui.Tr.LcExitFilterMode,
 			onPress: func() error {
-				gui.State.FilterPath = ""
+				gui.State.Modes.Filtering.Path = ""
 				return gui.Errors.ErrRestart
 			},
 		})
 	}
 
-	return gui.createMenu(gui.Tr.SLocalize("FilteringMenuTitle"), menuItems, createMenuOptions{showCancel: true})
+	return gui.createMenu(gui.Tr.FilteringMenuTitle, menuItems, createMenuOptions{showCancel: true})
 }
